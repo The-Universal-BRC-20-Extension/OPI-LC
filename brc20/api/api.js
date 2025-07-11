@@ -118,7 +118,16 @@ app.get('/v1/brc20/balance_on_block', async (request, response) => {
     console.log(`${request.protocol}://${request.get('host')}${request.originalUrl}`)
     let block_height = request.query.block_height
     let pkscript = request.query.pkscript
+    if (!request.query.ticker) {
+      return response.status(400).send({ error: 'Missing required parameter: ticker', result: null });
+    }
     let tick = request.query.ticker.toLowerCase()
+
+    // Validate block_height is a valid integer
+    if (!block_height || isNaN(parseInt(block_height))) {
+      return response.status(400).send({ error: 'Invalid block_height parameter', result: null });
+    }
+    block_height = parseInt(block_height);
 
     let current_block_height = await get_block_height_of_db()
     if (block_height > current_block_height + 1) {
@@ -150,6 +159,12 @@ app.get('/v1/brc20/activity_on_block', async (request, response) => {
   try {
     console.log(`${request.protocol}://${request.get('host')}${request.originalUrl}`)
     let block_height = request.query.block_height
+
+    // Validate block_height is a valid integer
+    if (!block_height || isNaN(parseInt(block_height))) {
+      return response.status(400).send({ error: 'Invalid block_height parameter', result: null });
+    }
+    block_height = parseInt(block_height);
 
     let current_block_height = await get_block_height_of_db()
     if (block_height > current_block_height) {
@@ -193,6 +208,9 @@ app.get('/v1/brc20/get_current_balance_of_wallet', async (request, response) => 
     console.log(`${request.protocol}://${request.get('host')}${request.originalUrl}`)
     let address = request.query.address || ''
     let pkscript = request.query.pkscript || ''
+    if (!request.query.ticker) {
+      return response.status(400).send({ error: 'Missing required parameter: ticker', result: null });
+    }
     let tick = request.query.ticker.toLowerCase()
 
     let current_block_height = await get_block_height_of_db()
@@ -324,7 +342,9 @@ app.get('/v1/brc20/holders', async (request, response) => {
       response.status(400).send({ error: 'not supported', result: null })
       return
     }
-
+    if (!request.query.ticker) {
+      return response.status(400).send({ error: 'Missing required parameter: ticker', result: null });
+    }
     let tick = request.query.ticker.toLowerCase() || ''
 
     let current_block_height = await get_block_height_of_db()

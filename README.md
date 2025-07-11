@@ -1,58 +1,224 @@
-# OPI-LC - Open Protocol Indexer - Light Client
+# OPI-LC (OPI BRC20 Light Client)
 
-**OPI-LC**, is a light client for **meta-protocols** on Bitcoin. **OPI-LC** uses **OPI Network** to fetch valid event hashes for a block and **OPI API** for fetching events for the block. Then it re-calculates the hashes itself to validate the events.
+A Node.js API server for BRC20 token indexing and querying with PostgreSQL backend.
 
-OPI-LC supports both **PostgreSQL** for better performance, and **Sqlite3** for ease of setup.
+## 🚀 Quick Start
 
-Currently OPI-LC only supports **BRC-20**, we'll add new modules over time. Pull Requests are welcomed for other meta-protocols.
+### Prerequisites
+- Node.js v20+
+- PostgreSQL 15+
+- Database `opi_lc` with BRC20 data imported
+- User `indexer` with database access
 
-## BRC-20 Light Client / API
-
-**BRC-20 Light Client** is the first module of OPI-LC. It follows the official protocol rules hosted [here](https://layer1.gitbook.io/layer1-foundation/protocols/brc-20/indexing). BRC-20 Light Client saves all historical balance changes and all BRC-20 events. Also optionally it can store current balance table and unused transfer inscriptions table.
-
-In addition to indexing all events, it also calculates a block hash and cumulative hash of all events and compares with verified hash from opi network. Here's the pseudocode for hash calculation:
-```python
-## Calculation starts at block 767430 which is the first inscription block
-
-EVENT_SEPARATOR = '|'
-## max_supply, limit_per_mint, amount decimal count is the same as ticker's decimals (no trailing dot if decimals is 0)
-## tickers are lowercase
-for event in block_events:
-  if event is 'deploy-inscribe':
-    block_str += 'deploy-inscribe;<inscr_id>;<deployer_pkscript>;<ticker>;<max_supply>;<decimals>;<limit_per_mint>' + EVENT_SEPARATOR
-  if event is 'mint-inscribe':
-    block_str += 'mint-inscribe;<inscr_id>;<minter_pkscript>;<ticker>;<amount>' + EVENT_SEPARATOR
-  if event is 'transfer-inscribe':
-    block_str += 'transfer-inscribe;<inscr_id>;<source_pkscript>;<ticker>;<amount>' + EVENT_SEPARATOR
-  if event is 'transfer-transfer':
-    ## if sent as fee, sent_pkscript is empty
-    block_str += 'transfer-transfer;<inscr_id>;<source_pkscript>;<sent_pkscript>;<ticker>;<amount>' + EVENT_SEPARATOR
-
-if block_str.last is EVENT_SEPARATOR: block_str.remove_last()
-block_hash = sha256_hex(block_str)
-## for first block last_cumulative_hash is empty
-cumulative_hash = sha256_hex(last_cumulative_hash + block_hash)
+### 1. Start the API Server
+```bash
+cd /home/indexer/OPI-LC/brc20/api
+export API_PORT=3003
+npm start
 ```
 
-There is an optional block event hash reporting system pointed at https://api.opi.network/report_block. If you want to exclude your node from this, just change `REPORT_TO_INDEXER` variable in `brc20/psql/.env` and `brc20/sqlite/.env`.
-Also do not forget to change `REPORT_NAME` to differentiate your node from others.
+### 2. Test the API
+```bash
+# In a separate terminal
+cd /home/indexer/OPI-LC/brc20/api
+npm test
+```
 
-**BRC-20 API** exposes activity on block (block events), balance of a wallet at the start of a given height, current balance of a wallet, block hash and cumulative hash at a given block and hash of all current balances. Also if optional extra tables are created, it exposes brc20 holders of a ticker, unused tx inscriptions of a ticker and unused tx inscriptions of a wallet.
+### 3. Verify API is Running
+```bash
+curl http://127.0.0.1:3003/v1/brc20/ip
+```
 
-# Setup
+## 📁 Project Structure
 
-For detailed installation guides:
-- BRC20
-  - Ubuntu
-    - PostgreSQL
-      - [en](INSTALL.brc20.psql.ubuntu.md)
-      - [cn](INSTALL.brc20.psql.ubuntu.cn.md)
-    - SQLite3
-      - [en](INSTALL.brc20.sqlite.ubuntu.md)
-      - [cn](INSTALL.brc20.sqlite.ubuntu.cn.md)
+```
+OPI-LC/
+├── brc20/
+│   ├── api/                    # Main API server
+│   │   ├── api.js             # Express server
+│   │   ├── package.json       # Dependencies & scripts
+│   │   └── tests/             # Test suites
+│   │       ├── unit/          # Unit tests
+│   │       ├── integration/   # API endpoint tests
+│   │       └── functional/    # Service lifecycle tests
+│   └── psql/                  # Database scripts
+└── README.md                  # This file
+```
 
-# Update
+## 🔧 Common Operations
 
-- Stop all clients and apis
-- Update the repo (`git pull`)
-- Re-run all clients and apis
+### Start API Server
+```bash
+cd /home/indexer/OPI-LC/brc20/api
+export API_PORT=3003
+npm start
+```
+
+### Stop API Server
+```bash
+pkill -f "node.*api"
+```
+
+### Run All Tests
+```bash
+cd /home/indexer/OPI-LC/brc20/api
+npm test
+```
+
+### Run Specific Test Suites
+```bash
+# Unit tests only
+npm test -- tests/unit/
+
+# Integration tests only
+npm test -- tests/integration/
+
+# Functional tests only
+npm test -- tests/functional/
+```
+
+### Check Database Connection
+```bash
+psql -d opi_lc -U indexer -c "SELECT * FROM brc20_indexer_version LIMIT 1;"
+```
+
+## 🌐 API Endpoints
+
+### Health Checks
+- `GET /v1/brc20/ip` - Returns client IP
+- `GET /v1/brc20/db_version` - Returns database version
+- `GET /v1/brc20/event_hash_version` - Returns event hash version
+- `GET /v1/brc20/block_height` - Returns current block height
+
+### Balance Endpoints
+- `GET /v1/brc20/balance_on_block` - Get balance at specific block
+- `GET /v1/brc20/get_current_balance_of_wallet` - Get current wallet balance
+
+### Activity Endpoints
+- `GET /v1/brc20/activity_on_block` - Get activity for specific block
+
+## 🐛 Troubleshooting
+
+### API Won't Start
+**Problem:** `npm start` fails with "Missing script"
+**Solution:** 
+```bash
+cd /home/indexer/OPI-LC/brc20/api  # Must be in correct directory
+npm start
+```
+
+### Tests Fail with Connection Refused
+**Problem:** Tests fail with `ECONNREFUSED 127.0.0.1:3003`
+**Solution:** 
+1. Start API server first:
+   ```bash
+   cd /home/indexer/OPI-LC/brc20/api
+   export API_PORT=3003
+   npm start
+   ```
+2. Run tests in separate terminal:
+   ```bash
+   cd /home/indexer/OPI-LC/brc20/api
+   npm test
+   ```
+
+### Database Connection Issues
+**Problem:** API returns 500 errors
+**Solution:**
+```bash
+# Check database connection
+psql -d opi_lc -U indexer -c "SELECT 1;"
+
+# Check if version table has data
+psql -d opi_lc -U indexer -c "SELECT * FROM brc20_indexer_version;"
+
+# If empty, insert data:
+psql -d opi_lc -U indexer -c "INSERT INTO brc20_indexer_version (indexer_version, db_version, event_hash_version) VALUES ('1.0.0', 1, 1);"
+```
+
+### Parameter Validation Errors
+**Problem:** API returns 400 for valid requests
+**Solution:** Check required parameters:
+- `ticker` - Required for balance endpoints
+- `block_height` - Must be valid integer
+- `pkscript` or `address` - Required for wallet endpoints
+
+## 📊 Test Results
+
+### Expected Test Output
+```
+Test Suites: 4 passed, 4 total
+Tests:       25 passed, 25 total
+Snapshots:   0 total
+Time:        0.5s
+```
+
+### Test Categories
+- **Unit Tests:** Database connectivity, basic functionality
+- **Integration Tests:** API endpoint behavior, error handling
+- **Functional Tests:** Service lifecycle, concurrent requests
+
+## 🔄 Development Workflow
+
+1. **Make Changes:** Edit files in `/home/indexer/OPI-LC/brc20/api/`
+2. **Restart API:** Kill old process, start new one
+3. **Run Tests:** Verify changes work correctly
+4. **Test Manually:** Use curl to test specific endpoints
+
+## 📝 Environment Variables
+
+Required environment variables:
+```bash
+export API_PORT=3003
+export DB_USER=indexer
+export DB_PASSWD=your_password
+export DB_HOST=localhost
+export DB_DATABASE=opi_lc
+export DB_PORT=5432
+export DB_TYPE=psql
+```
+
+## 🚨 Emergency Procedures
+
+### API Crashes
+```bash
+# Kill all Node.js processes
+pkill -f "node.*api"
+
+# Restart API
+cd /home/indexer/OPI-LC/brc20/api
+export API_PORT=3003
+npm start
+```
+
+### Database Issues
+```bash
+# Check PostgreSQL status
+sudo systemctl status postgresql
+
+# Restart PostgreSQL if needed
+sudo systemctl restart postgresql
+```
+
+### Full Reset
+```bash
+# Stop API
+pkill -f "node.*api"
+
+# Clear any cached data
+cd /home/indexer/OPI-LC/brc20/api
+rm -rf node_modules/.cache
+
+# Restart API
+export API_PORT=3003
+npm start
+```
+
+## 📞 Support
+
+For issues:
+1. Check this README first
+2. Run `npm test` to identify specific failures
+3. Check API logs for error messages
+4. Verify database connectivity
+5. Ensure all environment variables are set correctly
