@@ -9,6 +9,9 @@ import psycopg2
 import hashlib
 import buidl
 
+# Import Bitcoin RPC utilities
+from bitcoin_rpc_utils import get_spending_txid_with_fallback, is_bitcoin_rpc_available
+
 ## global variables
 ticks = {}
 in_commit = False
@@ -526,7 +529,7 @@ def get_block_from_opi_network(block_height):
   events = None
   block_hash, opi_cumulative_event_hash = get_block_info_from_opi_network(block_height)
   if block_hash is None or opi_cumulative_event_hash is None: return [None, None, None]
-  if block_height < first_brc20_height: return [[], block_hash, opi_cumulative_event_hash]
+  if block_height < first_inscription_height: return [[], block_hash, opi_cumulative_event_hash]
   inner_event_providers = events_providers.copy()
   while len(inner_event_providers) != 0:
     event_provider = random.choice(inner_event_providers)
@@ -590,6 +593,13 @@ def get_block_from_opi_network(block_height):
 def index_block(block_height):
   global ticks, block_events_str
   print("Indexing block " + str(block_height))
+  
+  # Log Bitcoin RPC availability
+  if is_bitcoin_rpc_available():
+    print("✅ Bitcoin RPC available - will lookup real spending txids")
+  else:
+    print("⚠️  Bitcoin RPC not available - using fallback txid (-1)")
+  
   block_events_str = ""
   error = False
   
@@ -872,8 +882,14 @@ def index_block(block_height):
       if is_used_or_invalid(inscr_id): 
         error = True
         break ## already used or invalid
-      if spent_pkScript is None: transfer_transfer_spend_to_fee(block_height, inscr_id, tick, original_tick, amount, -1)
-      else: transfer_transfer_normal(block_height, inscr_id, spent_pkScript, spent_wallet, tick, original_tick, amount, -1)
+      
+      # Get spending txid using Bitcoin RPC with fallback to -1
+      spending_txid = get_spending_txid_with_fallback(block_height, inscr_id)
+      
+      if spent_pkScript is None: 
+        transfer_transfer_spend_to_fee(block_height, inscr_id, tick, original_tick, amount, spending_txid)
+      else: 
+        transfer_transfer_normal(block_height, inscr_id, spent_pkScript, spent_wallet, tick, original_tick, amount, spending_txid)
   
   if error:
     return False

@@ -1,5 +1,127 @@
+# OS generated files
 .DS_Store
 ._.DS_Store
 **/.DS_Store
 **/._.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Documentation and temporary files
+temp-docs/
+temp_docs/
+docs/temp/
+*.log
+*.log.*
+*.tmp
+*.temp
+
+# Environment files (contain sensitive data)
+**/.env
+**/.env.*
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+package-lock.json
+yarn.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Coverage and testing
+coverage/
+*.lcov
+.nyc_output
+.pytest_cache/
+.tox/
+.coverage
+htmlcov/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.backup
+
+# Logs and runtime files
+logs/
+*.pid
+*.seed
+*.pid.lock
+pids/
+
+# Cache directories
+.cache/
+.parcel-cache/
+.npm/
+.eslintcache
+.stylelintcache
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.nuxt/
+
+# Service files
+*.service
+
+# Custom development files
+dev/
+development/
+
+# Bitcoin Core data (if any)
+.bitcoin/
+bitcoin.conf
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Temporary files
+tmp/
+temp/
 

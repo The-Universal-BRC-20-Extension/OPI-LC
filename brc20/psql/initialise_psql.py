@@ -24,6 +24,13 @@ if init_env:
   REPORT_RETRIES="10"
   REPORT_NAME=""
   CREATE_EXTRA_TABLES="true"
+  BITCOIN_RPC_HOST="127.0.0.1"
+  BITCOIN_RPC_PORT="8332"
+  BITCOIN_RPC_USER="bitcoinrpc"
+  BITCOIN_RPC_PASSWORD="your_password"
+  BITCOIN_RPC_SCHEME="http"
+  BITCOIN_RPC_TIMEOUT="30"
+  USE_BITCOIN_RPC_FOR_TXID="true"
   print("Initialising .env file")
   print("leave blank to use default values")
   res = input("BRC20 Postgres DB username (Default: postgres): ")
@@ -56,6 +63,27 @@ if init_env:
     res = input("Report retries (Default: 10): ")
     if res != '':
       REPORT_RETRIES = res
+    res = input("Use bitcoin rpc for txid (Default: true): ")
+    if res != '':
+      USE_BITCOIN_RPC_FOR_TXID = res
+    res = input("Bitcoin rpc host (Default: 127.0.0.1): ")
+    if res != '':
+      BITCOIN_RPC_HOST = res
+    res = input("Bitcoin rpc port (Default: 8332): ")
+    if res != '':
+      BITCOIN_RPC_PORT = res
+    res = input("Bitcoin rpc user (Default: bitcoinrpc): ")
+    if res != '':
+      BITCOIN_RPC_USER = res
+    res = input("Bitcoin rpc password: ")
+    if res != '':
+      BITCOIN_RPC_PASSWORD = res
+    res = input("Bitcoin rpc scheme (Default: http): ")
+    if res != '':
+      BITCOIN_RPC_SCHEME = res
+    res = input("Bitcoin rpc timeout (Default: 30): ")
+    if res != '':
+      BITCOIN_RPC_TIMEOUT = res
     while True:
       res = input("Report name: ")
       if res != '':
@@ -79,5 +107,12 @@ if init_env:
   f.write("REPORT_RETRIES=\""+REPORT_RETRIES+"\"\n")
   f.write("REPORT_NAME=\""+REPORT_NAME+"\"\n")
   f.write("CREATE_EXTRA_TABLES=\""+CREATE_EXTRA_TABLES+"\"\n")
+  f.write("BITCOIN_RPC_HOST=\""+BITCOIN_RPC_HOST+"\"\n")
+  f.write("BITCOIN_RPC_PORT=\""+BITCOIN_RPC_PORT+"\"\n")
+  f.write("BITCOIN_RPC_USER=\""+BITCOIN_RPC_USER+"\"\n")
+  f.write("BITCOIN_RPC_PASSWORD=\""+BITCOIN_RPC_PASSWORD+"\"\n")
+  f.write("BITCOIN_RPC_SCHEME=\""+BITCOIN_RPC_SCHEME+"\"\n")
+  f.write("BITCOIN_RPC_TIMEOUT=\""+BITCOIN_RPC_TIMEOUT+"\"\n")
+  f.write("USE_BITCOIN_RPC_FOR_TXID=\""+USE_BITCOIN_RPC_FOR_TXID+"\"\n")
   f.close()
 

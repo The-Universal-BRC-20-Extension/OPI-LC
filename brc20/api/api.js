@@ -4,6 +4,8 @@ const { Pool } = require('pg')
 var cors = require('cors')
 const crypto = require('crypto');
 const sqlite3 = require('sqlite3');
+const { spawn } = require('child_process');
+const path = require('path');
 
 // for self-signed cert of postgres
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
@@ -202,6 +204,49 @@ app.get('/v1/brc20/activity_on_block', async (request, response) => {
   }
 });
 
+// get transfer-transfer event by spending transaction ID (for no_return validation)
+app.get('/v1/brc20/event/by-spending-tx/:txid', async (request, response) => {
+  try {
+    console.log(`${request.protocol}://${request.get('host')}${request.originalUrl}`)
+    let txid = request.params.txid
+
+    // Validate txid parameter
+    if (!txid || txid.trim() === '') {
+      return response.status(400).send({ error: 'Missing or invalid txid parameter', result: null });
+    }
+
+    let query = `
+      SELECT id, event_type, block_height, inscription_id, event
+      FROM brc20_events 
+      WHERE event_type = 3 
+        AND event->>'using_tx_id' = $1
+      LIMIT 1
+    `
+    
+    let res = await query_db(query, [txid])
+    
+    if (res.rows.length === 0) {
+      return response.status(404).send({
+        error: "Event not found for the given spending transaction ID",
+        result: null
+      });
+    }
+    
+    let event = res.rows[0]
+    if (DB_TYPE == 'sqlite') {
+      event.event = JSON.parse(event.event)
+    }
+    
+    response.send({
+      error: null,
+      result: event
+    })
+    
+  } catch (err) {
+    console.log(err)
+    response.status(500).send({ error: 'internal error', result: null })
+  }
+});
 
 app.get('/v1/brc20/get_current_balance_of_wallet', async (request, response) => {
   try {
@@ -505,6 +550,53 @@ app.get('/v1/brc20/get_hash_of_all_current_balances', async (request, response) 
   } catch (err) {
     console.log(err)
     response.status(500).send({ error: 'internal error', result: null })
+  }
+});
+
+// Utility to call the Python script for spending txid lookup
+async function lookupSpendingTx(block_height, prev_txid, prev_vout) {
+  return new Promise((resolve, reject) => {
+    const scriptPath = path.join(__dirname, 'lookup_spending_tx.py');
+    const args = [
+      '--block_height', block_height,
+      '--prev_txid', prev_txid,
+      '--prev_vout', prev_vout
+    ];
+    const env = Object.assign({}, process.env);
+    const py = spawn('pipenv', ['run', 'python3', scriptPath, ...args], { env });
+    let stdout = '';
+    let stderr = '';
+    py.stdout.on('data', (data) => { stdout += data.toString(); });
+    py.stderr.on('data', (data) => { stderr += data.toString(); });
+    py.on('close', (code) => {
+      if (code === 0) {
+        try {
+          const result = JSON.parse(stdout);
+          resolve(result);
+        } catch (e) {
+          reject(new Error('Invalid JSON from Python script'));
+        }
+      } else {
+        reject(new Error(stderr || 'Python script failed'));
+      }
+    });
+  });
+}
+
+// Endpoint: /v1/brc20/lookup_spending_tx?block_height=...&prev_txid=...&prev_vout=...
+app.get('/v1/brc20/lookup_spending_tx', async (request, response) => {
+  try {
+    const block_height = request.query.block_height;
+    const prev_txid = request.query.prev_txid;
+    const prev_vout = request.query.prev_vout;
+    if (!block_height || !prev_txid || typeof prev_vout === 'undefined') {
+      return response.status(400).send({ error: 'Missing required parameters: block_height, prev_txid, prev_vout', result: null });
+    }
+    const result = await lookupSpendingTx(block_height, prev_txid, prev_vout);
+    response.send({ error: null, result });
+  } catch (err) {
+    console.log(err);
+    response.status(500).send({ error: err.message || 'internal error', result: null });
   }
 });
 

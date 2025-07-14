@@ -37,6 +37,10 @@ CREATE INDEX brc20_events_block_height_idx ON public.brc20_events USING btree (b
 CREATE INDEX brc20_events_event_type_idx ON public.brc20_events USING btree (event_type);
 CREATE INDEX brc20_events_inscription_id_idx ON public.brc20_events USING btree (inscription_id);
 
+-- No Return API indexes for efficient transfer-transfer event lookups
+CREATE INDEX brc20_events_event_gin_idx ON public.brc20_events USING GIN (event);
+CREATE INDEX brc20_events_using_tx_id_idx ON public.brc20_events ((event->>'using_tx_id')) WHERE event_type = 3;
+
 CREATE TABLE public.brc20_tickers (
 	id bigserial NOT NULL,
 	tick text NOT NULL,
