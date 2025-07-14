@@ -19,6 +19,8 @@ docs/temp/
 # Environment files (contain sensitive data)
 **/.env
 **/.env.*
+**/**/.env
+**/**/.env.*
 .env
 .env.local
 .env.development
@@ -111,6 +113,9 @@ out/
 # Custom development files
 dev/
 development/
+brc20/api/start_service.sh
+
+
 
 # Bitcoin Core data (if any)
 .bitcoin/

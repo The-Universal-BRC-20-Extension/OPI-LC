@@ -600,4 +600,50 @@ app.get('/v1/brc20/lookup_spending_tx', async (request, response) => {
   }
 });
 
+// Get ticker information by ticker symbol
+app.get('/v1/brc20/ticker/:tick', async (request, response) => {
+  try {
+    console.log(`${request.protocol}://${request.get('host')}${request.originalUrl}`)
+    let tick = request.params.tick.toLowerCase()
+
+    // Validate ticker parameter
+    if (!tick || tick.trim() === '') {
+      return response.status(400).send({ error: 'Missing or invalid ticker parameter', result: null });
+    }
+
+    let query = `SELECT tick, original_tick, max_supply, decimals, 
+                         limit_per_mint, remaining_supply, burned_supply, 
+                         is_self_mint, deploy_inscription_id, block_height
+                  FROM brc20_tickers 
+                  WHERE tick = $1;`
+    
+    let res = await query_db(query, [tick])
+    
+    if (res.rows.length === 0) {
+      return response.status(404).send({
+        error: "Ticker not found",
+        message: `Ticker '${tick.toUpperCase()}' is not deployed or does not exist`,
+        result: null
+      });
+    }
+    
+    let ticker_info = res.rows[0]
+    
+    // Get current block height for context
+    let current_block_height = await get_block_height_of_db()
+    
+    response.send({
+      error: null,
+      result: {
+        ...ticker_info,
+        current_block_height: current_block_height
+      }
+    })
+    
+  } catch (err) {
+    console.log(err)
+    response.status(500).send({ error: 'internal error', result: null })
+  }
+});
+
 app.listen(api_port, api_host);
